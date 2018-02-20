@@ -745,10 +745,20 @@ namespace NuGet.Protocol
                 // sources that have the weird "C:Source" format. For more information about this 
                 // format, see:
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx#paths
-                var uriResult = new Uri(root, UriKind.RelativeOrAbsolute);
+                Uri uriResult = null;
+                Uri.TryCreate(root, UriKind.RelativeOrAbsolute, out uriResult);
 
                 // Allow only local paths
-                if (uriResult?.IsAbsoluteUri == true && !uriResult.IsFile)
+                // NOTE: in the .net462 or higher are allowed DOS device service path. It can be used to solve the issue of long path supporting,
+                // but Uri doesn't support this path' style – we should handle this case
+                if (uriResult == null)
+                {
+                    if (!rootDirectoryInfo.Exists)
+                    {
+                        throw new NotSupportedException(rootDirectoryInfo.FullName);
+                    }
+                }
+                else if (uriResult?.IsAbsoluteUri == true && !uriResult.IsFile)
                 {
                     throw new NotSupportedException(uriResult.AbsoluteUri);
                 }
