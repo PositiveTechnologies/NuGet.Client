@@ -753,7 +753,13 @@ namespace NuGet.Protocol
                 // but Uri doesn't support this path' style – we should handle this case
                 if (uriResult == null)
                 {
-                    if (!rootDirectoryInfo.Exists)
+                    var currentDirectory = rootDirectoryInfo;
+                    while (currentDirectory != null && !currentDirectory.Exists)
+                    {
+                        currentDirectory = currentDirectory.Parent;
+                    }
+
+                    if (currentDirectory == null)
                     {
                         throw new NotSupportedException(rootDirectoryInfo.FullName);
                     }
