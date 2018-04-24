@@ -207,7 +207,8 @@ namespace NuGet.Packaging
 
                 var sourceFile = GetFile(packageFile);
 
-                var targetPath = Path.Combine(destination, packageFile);
+                // NOTE: DOS device style path can contain only backslashes
+                var targetPath = PathUtility.GetPathWithBackSlashes(Path.Combine(destination, packageFile));
                 Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
 
                 using (var fileStream = sourceFile.OpenRead())
