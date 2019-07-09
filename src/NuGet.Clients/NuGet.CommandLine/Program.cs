@@ -14,7 +14,6 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
-using Microsoft.Win32;
 using NuGet.Common;
 using NuGet.PackageManagement;
 
@@ -24,14 +23,7 @@ namespace NuGet.CommandLine
     {
         private const string Utf8Option = "-utf8";
         private const string ForceEnglishOutputOption = "-forceEnglishOutput";
-#if DEBUG
         private const string DebugOption = "--debug";
-#endif
-        private const string OSVersionRegistryKey = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
-        private const string FilesystemRegistryKey = @"SYSTEM\CurrentControlSet\Control\FileSystem";
-        private const string DotNetSetupRegistryKey = @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\";
-        private const int Net462ReleasedVersion = 394802;
-
 
         private static readonly string ThisExecutableName = typeof(Program).Assembly.GetName().Name;
 
@@ -51,9 +43,6 @@ namespace NuGet.CommandLine
 
         public static int Main(string[] args)
         {
-            AppContext.SetSwitch("Switch.System.IO.UseLegacyPathHandling", false);
-            AppContext.SetSwitch("Switch.System.IO.BlockLongPaths", false);
-
 #if DEBUG
             if (args.Contains(DebugOption, StringComparer.OrdinalIgnoreCase))
             {
@@ -172,12 +161,6 @@ namespace NuGet.CommandLine
             catch (ExitCodeException e)
             {
                 return e.ExitCode;
-            }
-            catch (PathTooLongException e)
-            {
-                LogException(e, console);
-                LogHelperMessageForPathTooLongException(console);
-                return 1;
             }
             catch (Exception exception)
             {
@@ -376,43 +359,6 @@ namespace NuGet.CommandLine
             var logStackAsError = console.Verbosity == Verbosity.Detailed;
 
             ExceptionUtilities.LogException(exception, console, logStackAsError);
-        }
-
-        private static void LogHelperMessageForPathTooLongException(Console logger)
-        {
-            if (!IsWindows10(logger))
-            {
-                logger.WriteWarning(LocalizedResourceManager.GetString(nameof(NuGetResources.Warning_LongPath_UnsupportedOS)));
-            }
-            else if (!IsSupportLongPathEnabled(logger))
-            {
-                logger.WriteWarning(LocalizedResourceManager.GetString(nameof(NuGetResources.Warning_LongPath_DisabledPolicy)));
-            }
-            else if (!IsRuntimeGreaterThanNet462(logger))
-            {
-                logger.WriteWarning(LocalizedResourceManager.GetString(nameof(NuGetResources.Warning_LongPath_UnsupportedNetFramework)));
-            }
-        }
-
-        private static bool IsWindows10(ILogger logger)
-        {
-            var productName = (string)RegistryKeyUtility.GetValueFromRegistryKey("ProductName", OSVersionRegistryKey, Registry.LocalMachine, logger);
-
-            return productName != null && productName.StartsWith("Windows 10");
-        }
-
-        private static bool IsSupportLongPathEnabled(ILogger logger)
-        {
-            var longPathsEnabled = RegistryKeyUtility.GetValueFromRegistryKey("LongPathsEnabled", FilesystemRegistryKey, Registry.LocalMachine, logger);
-
-            return longPathsEnabled != null && (int)longPathsEnabled > 0;
-        }
-
-        private static bool IsRuntimeGreaterThanNet462(ILogger logger)
-        {
-            var release = RegistryKeyUtility.GetValueFromRegistryKey("Release", DotNetSetupRegistryKey, Registry.LocalMachine, logger);
-
-            return release != null && (int)release >= Net462ReleasedVersion;
         }
     }
 }
