@@ -142,6 +142,25 @@ phases:
       configuration: "$(BuildConfiguration)"
       msbuildArguments: "/t:BuildNoVSIX /p:BuildRTM=$(BuildRTM) /p:BuildNumber=$(BuildNumber)"
 
+  - task: NuGetCommand@2
+    displayName: "Add VS Package Source"
+    inputs:
+      command: "custom"
+      arguments: "sources add -Name VS -Source $(VsPackageFeedUrl) -UserName $(VsPackageFeedUsername) -Password $(VsPackageFeedPassword) -ConfigFile $(System.DefaultWorkingDirectory)\\NuGet.config"
+
+  - task: NuGetCommand@2
+    displayName: "Install OptProfV2 package"
+    inputs:
+      command: "custom"
+      arguments: "install Microsoft.DevDiv.Validation.TestPlatform.Settings.Tasks -Version 1.0.308 -Source $(VsPackageFeedUrl) -ConfigFile $(System.DefaultWorkingDirectory)\\NuGet.config -OutputDirectory $(System.DefaultWorkingDirectory)\\packages"
+
+  - task: MSBuild@1
+    displayName: "Generate .runsettings file"
+    inputs:
+      solution: "build\\NuGet.OptProfV2.runsettingsproj"
+      msbuildVersion: "16.0"
+    condition: "and(succeeded(),eq(variables['BuildRTM'], 'true'))"
+
   - task: MSBuild@1
     displayName: "Ensure msbuild.exe can parse nuget.sln"
     continueOnError: "false"
@@ -309,6 +328,14 @@ phases:
         $(VsixPublishDir)\\Microsoft.VisualStudio.NuGet.BuildTools.json
         $(VsixPublishDir)\\EndToEnd.zip
       TargetFolder: "$(BuildOutputTargetPath)\\artifacts"
+
+  - task: CopyFiles@2
+    displayName: "Copy .runsettings file"
+    inputs:
+      SourceFolder: "artifacts\\OptProfV2"
+      Contents: "NuGet.OptProfV2.runsettings"
+      TargetFolder: "$(BuildOutputTargetPath)\\artifacts\\OptProfV2"
+    condition: "and(succeeded(),eq(variables['BuildRTM'], 'true'))"
 
   - task: PublishBuildArtifacts@1
     displayName: "Publish NuGet.exe VSIX and EndToEnd.zip as artifact"
@@ -724,7 +751,7 @@ phases:
   - checkout: self
     clean: true
     submodules: true
-    
+
   - task: PowerShell@1
     displayName: "Print Environment Variables"
     inputs:
@@ -738,7 +765,7 @@ phases:
     inputs:
       artifactName: "VS15"
       downloadPath: "$(Build.Repository.LocalPath)/artifacts"
-        
+
   - task: NuGetToolInstaller@0
     displayName: "Use NuGet 4.5.0"
     inputs:
