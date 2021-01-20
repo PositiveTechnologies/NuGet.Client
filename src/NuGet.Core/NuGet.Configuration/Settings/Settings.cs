@@ -844,7 +844,7 @@ namespace NuGet.Configuration
 
         private static IEnumerable<string> GetSettingsFilePaths(string root)
         {
-            while (root != null)
+            while (!String.IsNullOrEmpty(root))
             {
                 yield return root;
                 root = Path.GetDirectoryName(root);
